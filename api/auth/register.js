@@ -17,7 +17,7 @@ function translateError(msg) {
   if (m.includes('User already registered') || m.includes('already registered')) return '该邮箱已注册';
   if (m.includes('Password should be at least')) return '密码至少需要 6 位';
   if (m.includes('Invalid email') || m.includes('invalid email')) return '邮箱格式不对';
-  if (m.includes('Email rate limit')) return '请求太频繁，请稍后再试';
+  if (m.toLowerCase().includes('email rate limit')) return '邮箱发送已达频率上限，请稍后再试（Supabase 邮箱频率限制，通常过一段时间自动恢复）';
   if (m.includes('Signup is disabled') || m.includes('signups are disabled') || m.includes('Signups not allowed')) return '注册已关闭，请在 Supabase 后台 Auth 设置里开启邮箱注册';
   if (m.includes('Email address') && m.includes('invalid')) return '邮箱地址无效';
   if (m.includes('Database error')) return '数据库错误：' + m;
