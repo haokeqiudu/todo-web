@@ -1,0 +1,1 @@
+{"dependencies":{"@supabase/supabase-js":"^2.0.0"},"description":"待办清单：前端静态 HTML + Vercel Functions 后端，Supabase 为主库，密钥只在服务端环境变量里","name":"todo-web","private":true,"version":"1.0.0"}

@@ -1,13 +1,14 @@
 # 待办清单（todo-web）
 
-单个 HTML 文件的待办小工具，无后端、不联网、不用数据库，数据只存在浏览器本地存储。
+邮箱密码登录的待办小工具：前端单个 HTML + Vercel Functions 后端，Supabase 当主库，换设备同邮箱登录也能看到自己的待办。
 
 ## 打开方式
 
-直接用浏览器打开 `index.html` 即可使用。
+部署地址打开即用。未登录只显示登录页；登录成功后显示待办主界面，左上角头像为邮箱首字母，点头像进详情页（邮箱、该账号统计、退出登录、返回待办清单）。
 
 ## 功能
 
+- 注册 / 登录 / 退出：邮箱 + 密码（至少 6 位），注册后若项目要求邮箱验证，需去邮箱点验证链接再登录；忘记密码可发重置邮件
 - 添加待办，添加时可选优先级（高 / 中 / 低，默认中）和截止日期（可留空）
 - 清单按优先级排序：高 → 中 → 低，同优先级按添加顺序
 - 点圆圈切换已完成 / 未完成，已完成会划删除线
@@ -21,11 +22,26 @@
 - 逾期：未完成且截止日期早于今天才标“逾期”，已完成不标、无日期不标
 - 背景：右上角下拉切换白色 / 深色 / 护眼，默认白色
 - 空态与无结果：清单为空显示“暂无待办”，筛选或搜索无结果显示“没有符合条件的待办”
+- 首次导入：首次登录且云端为空、本地有旧待办时，弹一次导入提示，确认后把本地待办导入该账号
+- 云端断开：拉不到云端时显示本地缓存 + “云端未连接，显示本地缓存”；写失败时显示“云端保存失败，请重试”，本地缓存不变
 
-## 数据存储
+## 架构
 
-- 待办数据：浏览器 localStorage，键名 `todo-web-v1`
+- 前端：单个 `index.html`，只调同域后端 API（`/api/...`），不含 Supabase 项目地址、不含任何密钥、不直连数据库
+- 后端：`api/` 下的 Vercel Functions，随本项目一起部署
+  - `POST /api/auth/register`、`POST /api/auth/login`、`POST /api/auth/logout`、`POST /api/auth/forgot-password`
+  - `GET /api/todos`、`POST /api/todos`、`PATCH /api/todos/:id`、`DELETE /api/todos/:id`
+  - 每次待办接口先核验会话凭证，再按该会话的 user_id 查改，不信任前端传来的 user_id
+- 数据库：Supabase，表 `todos`（id、user_id、content、done、priority、deadline、tags、repeat_rule、created_at、updated_at），按 user_id 隔离
+
+## 密钥与环境变量（不在仓库里）
+
+Supabase 相关值只放在 Vercel 项目的环境变量里，由后端函数在服务端读取，不写进仓库、不写进前端。仓库里的后端代码只读变量名（如 SUPABASE_URL、SUPABASE_ANON_KEY、SUPABASE_SERVICE_ROLE_KEY），不含任何密钥值。
+
+## 本地数据
+
 - 背景偏好：浏览器 localStorage，键名 `todo-web-bg`
+- 会话凭证：登录后存在浏览器 localStorage，退出时清除；云端缓存键为 `todo-web-cloud-cache-<user_id>`
 - 旧数据打开时会自动迁移：无优先级默认“中”，无截止日期默认空，无标签默认空，无重复默认“不重复”，不丢内容和已完成状态
 
 ## 说明

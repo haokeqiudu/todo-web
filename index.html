@@ -3,13 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>待办清单</title>
+<title>待办清单 — Supabase 原型</title>
 <style>
   * { box-sizing: border-box; }
   body { margin: 0; font-family: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: #fff; color: #202020; }
   body.dark { background: #1e1e1e; color: #eee; }
   body.eye { background: #c7edcc; }
-  .topbar { max-width: 1060px; margin: 16px auto 0; padding: 0 16px; display: flex; justify-content: flex-end; }
+  .banner { background: #fff3cd; color: #664d03; text-align: center; padding: 10px 16px; font-size: 13px; }
+  .topbar { max-width: 1060px; margin: 16px auto 0; padding: 0 16px; display: flex; justify-content: space-between; align-items: center; }
+  .avatar-btn { display: flex; align-items: center; gap: 10px; border: 0; background: transparent; cursor: pointer; padding: 4px 8px; border-radius: 999px; }
+  .avatar-circle { width: 36px; height: 36px; border-radius: 50%; background: #e44332; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 700; flex-shrink: 0; }
+  .avatar-circle.big { width: 64px; height: 64px; font-size: 28px; }
+  .avatar-name { font-size: 15px; font-weight: 700; color: #202020; }
+  body.dark .avatar-name { color: #eee; }
   .topbar label { display: flex; gap: 8px; align-items: center; font-size: 13px; color: #555; background: #fff; border: 1px solid #eee; border-radius: 999px; padding: 7px 12px; }
   body.dark .topbar label { background: #2a2a2a; border-color: #444; color: #ccc; }
   .topbar select { padding: 5px 8px; font-size: 13px; border: 1px solid #ddd; border-radius: 999px; background: #fff; cursor: pointer; }
@@ -34,9 +40,9 @@
   .add-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
   #todo-input, #tag-input { flex: 1; min-width: 160px; padding: 11px 14px; font-size: 16px; border: 1px solid #ddd; border-radius: 999px; outline: none; }
   .add-row select, .add-row input[type="date"] { padding: 8px 10px; font-size: 14px; border: 1px solid #ddd; border-radius: 999px; background: #fff; }
-  body.dark #todo-input, body.dark #tag-input, body.dark .add-row select, body.dark .add-row input[type="date"], body.dark #search-input { background: #333; color: #eee; border-color: #444; }
-  #add-button { padding: 10px 20px; font-size: 15px; font-weight: 700; border: 0; border-radius: 999px; background: #e44332; color: #fff; cursor: pointer; }
-  #error-message { min-height: 20px; margin: 8px 0 0; color: #c00; font-size: 14px; }
+  body.dark #todo-input, body.dark #tag-input, body.dark .add-row select, body.dark .add-row input[type="date"], body.dark #search-input, body.dark .auth-input { background: #333; color: #eee; border-color: #444; }
+  #add-button, .primary-btn { padding: 10px 20px; font-size: 15px; font-weight: 700; border: 0; border-radius: 999px; background: #e44332; color: #fff; cursor: pointer; }
+  #error-message, .auth-error { min-height: 20px; margin: 8px 0 0; color: #c00; font-size: 14px; }
   #search-input { width: 100%; padding: 11px 16px; font-size: 15px; border: 1px solid #ddd; border-radius: 999px; outline: none; margin-bottom: 8px; }
   #undo-area { display: none; margin: 10px 0; padding: 12px 16px; border-radius: 999px; background: #fff; border: 1px solid #eee; font-size: 14px; }
   body.dark #undo-area { background: #2a2a2a; border-color: #444; }
@@ -59,181 +65,263 @@
   body.dark .text-btn { background: rgba(255,255,255,0.12); color: #ccc; }
   .spacer { flex: 1; }
   .empty { color: #888; padding: 20px 0; text-align: center; }
+  .auth-wrap { max-width: 420px; margin: 60px auto; padding: 0 16px; }
+  .auth-input { width: 100%; padding: 12px 16px; font-size: 15px; border: 1px solid #ddd; border-radius: 999px; outline: none; margin-bottom: 12px; }
   @media (max-width: 700px) { .layout { flex-direction: column; } .sidebar { width: auto; } }
 </style>
 </head>
 <body>
-<div class="topbar"><label>背景<select id="bg-select" aria-label="换背景"><option value="white">白色</option><option value="dark">深色</option><option value="eye">护眼</option></select></label></div>
-<div class="layout">
-  <aside class="sidebar">
-    <h2>待办清单</h2>
-    <button class="side-btn" data-filter="all" type="button"><span>全部</span><span class="side-count" data-count="all"></span></button>
-    <button class="side-btn" data-filter="todo" type="button"><span>未完成</span><span class="side-count" data-count="todo"></span></button>
-    <button class="side-btn" data-filter="done" type="button"><span>已完成</span><span class="side-count" data-count="done"></span></button>
-    <div class="tag-title">标签</div>
-    <div id="tag-list"></div>
-    <div class="sidebar-stats" id="stats"></div>
-  </aside>
-  <main class="main">
-    <div class="panel"><h1>待办清单</h1><div class="hint">圆圈颜色即优先级：高为红，中为橙，低为灰</div></div>
-    <div class="panel">
-      <div class="add-row">
-        <input id="todo-input" type="text" placeholder="写一件小事…" aria-label="待办内容">
-        <select id="add-priority" aria-label="优先级"><option value="高">高优先级</option><option value="中" selected>中优先级</option><option value="低">低优先级</option></select>
-        <input id="add-deadline" type="date" aria-label="截止日期">
-        <input id="tag-input" type="text" placeholder="标签，用逗号分隔，最多 5 个" aria-label="标签">
-        <select id="add-repeat" aria-label="重复"><option value="不重复" selected>不重复</option><option value="每天">每天</option><option value="每周">每周</option><option value="每月">每月</option></select>
-        <button id="add-button" type="button">添加</button>
-      </div>
-      <p id="error-message" role="alert"></p>
+<div class="banner">云端版 · 通过后端 API 连 Supabase，数据按账号隔离。</div>
+<div id="auth-view" class="auth-wrap">
+  <div class="panel" style="text-align:center;">
+    <h1>待办清单</h1>
+    <div class="hint" style="margin-bottom:16px;">用邮箱登录，换设备也能看到你的待办<br>用邮箱注册登录，换设备也能看到你的待办</div>
+    <input id="auth-email" class="auth-input" type="email" placeholder="邮箱" aria-label="邮箱">
+    <input id="auth-password" class="auth-input" type="password" placeholder="密码" aria-label="密码">
+    <div style="display:flex;gap:10px;justify-content:center;">
+      <button id="login-btn" class="primary-btn" type="button">登录</button>
+      <button id="register-btn" class="primary-btn" type="button">注册</button>
     </div>
-    <input id="search-input" type="text" placeholder="搜索待办…" aria-label="搜索">
-    <div id="undo-area">已删除，可撤销 <button id="undo-button" type="button">撤销</button></div>
-    <ul id="todo-list"></ul>
-  </main>
+    <div style="margin-top:12px;"><button id="forgot-btn" class="text-btn" type="button">忘记密码</button></div>
+    <div class="auth-error" id="auth-error"></div>
+  </div>
+</div>
+<div id="app-view" style="display:none;">
+  <div class="topbar">
+    <button id="avatar-btn" class="avatar-btn" type="button" aria-label="打开用户详情页"><span id="avatar-circle" class="avatar-circle">d</span><span id="avatar-name" class="avatar-name">demo</span></button>
+    <label>背景<select id="bg-select" aria-label="换背景"><option value="white">白色</option><option value="dark">深色</option><option value="eye">护眼</option></select></label>
+  </div>
+  <div class="layout">
+    <aside class="sidebar">
+      <h2>待办清单</h2>
+      <button class="side-btn" data-filter="all" type="button"><span>全部</span><span class="side-count" data-count="all"></span></button>
+      <button class="side-btn" data-filter="todo" type="button"><span>未完成</span><span class="side-count" data-count="todo"></span></button>
+      <button class="side-btn" data-filter="done" type="button"><span>已完成</span><span class="side-count" data-count="done"></span></button>
+      <div class="tag-title">标签</div>
+      <div id="tag-list"></div>
+      <div class="sidebar-stats" id="stats"></div>
+    </aside>
+    <main class="main">
+      <div id="todos-view">
+        <div class="panel"><h1>待办清单</h1><div class="hint" id="current-user-hint">当前账号：</div><div class="hint" id="cloud-hint"></div></div>
+        <div class="panel">
+          <div class="add-row">
+            <input id="todo-input" type="text" placeholder="写一件小事…" aria-label="待办内容">
+            <select id="add-priority" aria-label="优先级"><option value="高">高优先级</option><option value="中" selected>中优先级</option><option value="低">低优先级</option></select>
+            <input id="add-deadline" type="date" aria-label="截止日期">
+            <input id="tag-input" type="text" placeholder="标签，用逗号分隔，最多 5 个" aria-label="标签">
+            <select id="add-repeat" aria-label="重复"><option value="不重复" selected>不重复</option><option value="每天">每天</option><option value="每周">每周</option><option value="每月">每月</option></select>
+            <button id="add-button" type="button">添加</button>
+          </div>
+          <p id="error-message" role="alert"></p>
+        </div>
+        <input id="search-input" type="text" placeholder="搜索待办…" aria-label="搜索">
+        <div id="undo-area">已删除，可撤销 <button id="undo-button" type="button">撤销</button></div>
+        <ul id="todo-list"></ul>
+      </div>
+      <div id="users-view" style="display:none;">
+        <div class="panel">
+          <button id="back-btn" class="text-btn" type="button">← 返回待办清单</button>
+          <div style="display:flex;align-items:center;gap:16px;margin-top:16px;">
+            <span id="detail-avatar" class="avatar-circle big">d</span>
+            <div>
+              <div id="detail-name" style="font-size:20px;font-weight:800;word-break:break-all;">demo@example.com</div>
+              <div id="detail-stats" class="hint" style="margin-top:4px;">已完成 1 / 总共 3 · 进度 33%</div>
+            </div>
+          </div>
+          <div style="margin-top:16px;display:flex;gap:10px;"><button id="logout-btn" class="primary-btn" type="button">退出登录</button></div>
+        </div>
+      </div>
+    </main>
+  </div>
 </div>
 <script>
-  const STORAGE_KEY = "todo-web-v1";
-  const BG_KEY = "todo-web-bg";
-  function priorityRank(p) { return p === "高" ? 0 : (p === "低" ? 2 : 1); }
-  function parseTags(input) {
-    if (Array.isArray(input)) return input.map(function (t) { return String(t).trim(); }).filter(Boolean).slice(0, 5);
-    if (!input || typeof input !== "string") return [];
-    const seen = {}; const out = [];
-    input.split(",").forEach(function (part) { let t = part.trim(); if (!t) return; if (t.length > 8) t = t.slice(0, 8); if (seen[t]) return; seen[t] = 1; out.push(t); });
-    return out.slice(0, 5);
+  function parseTags(s){ if(Array.isArray(s)) return s.map(function(t){return String(t).trim();}).filter(Boolean).slice(0,5); if(!s) return []; var seen={}; var out=[]; s.split(",").forEach(function(p){ var t=p.trim(); if(!t) return; if(t.length>8) t=t.slice(0,8); if(seen[t]) return; seen[t]=1; out.push(t); }); return out.slice(0,5); }
+  function priorityRank(p){ return p==="高"?0:(p==="低"?2:1); }
+  function fmt(d){ var m=""+(d.getMonth()+1); var day=""+d.getDate(); return d.getFullYear()+"-"+(m.length<2?"0"+m:m)+"-"+(day.length<2?"0"+day:day); }
+  function addDays(ds, days){ var d=new Date(ds+"T00:00:00"); d.setDate(d.getDate()+days); return fmt(d); }
+  function addMonths(ds){ var d=new Date(ds+"T00:00:00"); var day=d.getDate(); d.setDate(1); d.setMonth(d.getMonth()+1); var last=new Date(d.getFullYear(), d.getMonth()+1, 0).getDate(); d.setDate(Math.min(day, last)); return fmt(d); }
+  function todayStr(){ return fmt(new Date()); }
+  function nextRepeatDate(deadline, repeat, today){ if(!deadline) return null; var next=deadline; for(var i=0;i<366;i++){ next=repeat==="每天"?addDays(next,1):repeat==="每周"?addDays(next,7):addMonths(next); if(next>today) return next; } return next; }
+  function toLocal(row){ return {"内容":row.content,"已完成":!!row.done,"优先级":row.priority,"截止日期":row.deadline||null,"标签":row.tags||[],"重复":row.repeat_rule,"_id":row.id}; }
+  function fromLocal(item){ return {content:item["内容"],done:!!item["已完成"],priority:item["优先级"],deadline:item["截止日期"]||null,tags:item["标签"]||[],repeat_rule:item["重复"]}; }
+  var email="", userId="", token="", items=[];
+  var view="todos", filter="all", search="", tagFilter=null, lastDeleted=null, editingId=null, editingDraft=null, bg="white";
+  try { bg = localStorage.getItem("todo-web-bg") || "white"; if(bg!=="dark" && bg!=="eye") bg="white"; } catch(e) {}
+  try { token = localStorage.getItem("todo-web-session-token") || ""; email = localStorage.getItem("todo-web-session-email") || ""; userId = localStorage.getItem("todo-web-session-user") || ""; } catch(e) {}
+  function cacheKey(){ return "todo-web-cloud-cache-" + (userId || email); }
+  function saveCache(){ try { localStorage.setItem(cacheKey(), JSON.stringify(items)); } catch(e) {} }
+  function loadCache(){ try { var raw = localStorage.getItem(cacheKey()); var data = raw ? JSON.parse(raw) : []; return Array.isArray(data) ? data : []; } catch(e) { return []; } }
+  function headers(){ return {"Content-Type":"application/json","Authorization":"Bearer "+token}; }
+  async function api(path, method, body){
+    var opts = {method: method, headers: headers()};
+    if(body !== undefined) opts.body = JSON.stringify(body);
+    var r = await fetch(path, opts);
+    var data = null; try { data = await r.json(); } catch(e) {}
+    if(r.status === 401){ logoutToLogin("登录已过期，请重新登录"); throw new Error("unauthorized"); }
+    if(!r.ok) throw new Error((data && data.error) || "请求失败，请重试");
+    return data;
   }
-  function fmtDate(d) { const m = "" + (d.getMonth() + 1); const day = "" + d.getDate(); return d.getFullYear() + "-" + (m.length < 2 ? "0" + m : m) + "-" + (day.length < 2 ? "0" + day : day); }
-  function addDaysStr(ds, days) { const d = new Date(ds + "T00:00:00"); d.setDate(d.getDate() + days); return fmtDate(d); }
-  function addMonthsStr(ds) { const d = new Date(ds + "T00:00:00"); const day = d.getDate(); d.setDate(1); d.setMonth(d.getMonth() + 1); const last = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate(); d.setDate(Math.min(day, last)); return fmtDate(d); }
-  function nextRepeatDate(deadline, repeat, today) {
-    if (!deadline) return null;
-    let next = deadline;
-    for (let i = 0; i < 366; i++) { next = repeat === "每天" ? addDaysStr(next, 1) : repeat === "每周" ? addDaysStr(next, 7) : addMonthsStr(next); if (next > today) return next; }
-    return next;
+  function logoutToLogin(msg){
+    try { localStorage.removeItem("todo-web-session-token"); localStorage.removeItem("todo-web-session-email"); localStorage.removeItem("todo-web-session-user"); } catch(e) {}
+    token=""; email=""; userId="";
+    document.getElementById("app-view").style.display="none"; document.getElementById("auth-view").style.display="block"; view="todos";
+    if(msg) document.getElementById("auth-error").textContent = msg;
   }
-  function generateNextItem(item, today) {
-    if (!item || item["重复"] === "不重复" || !item["重复"]) return null;
-    return { "内容": item["内容"], "已完成": false, "优先级": item["优先级"], "截止日期": nextRepeatDate(item["截止日期"], item["重复"], today), "标签": (item["标签"] || []).slice(), "重复": item["重复"] };
-  }
-  function migrateItem(item) {
-    if (!item || typeof item !== "object") return null;
-    const content = item["内容"];
-    if (!content || !String(content).trim()) return null;
-    return { "内容": String(content).trim(), "已完成": !!item["已完成"], "优先级": (item["优先级"] === "高" || item["优先级"] === "低") ? item["优先级"] : "中", "截止日期": (item["截止日期"] && /^\d{4}-\d{2}-\d{2}$/.test(item["截止日期"])) ? item["截止日期"] : null, "标签": parseTags(item["标签"]), "重复": (item["重复"] === "每天" || item["重复"] === "每周" || item["重复"] === "每月") ? item["重复"] : "不重复" };
-  }
-  function migrateItems(data) { if (!Array.isArray(data)) return []; return data.map(migrateItem).filter(Boolean); }
-  function addItem(items, content, priority, deadline, tags, repeat) {
-    if (!content || !content.trim()) return { ok: false, error: "请输入待办内容", items: items };
-    const pri = (priority === "高" || priority === "低") ? priority : "中";
-    const dl = (deadline && /^\d{4}-\d{2}-\d{2}$/.test(deadline)) ? deadline : null;
-    const rep = (repeat === "每天" || repeat === "每周" || repeat === "每月") ? repeat : "不重复";
-    return { ok: true, error: "", items: items.concat([{ "内容": content.trim(), "已完成": false, "优先级": pri, "截止日期": dl, "标签": parseTags(tags), "重复": rep }]) };
-  }
-  function toggleItem(items, index) {
-    if (index < 0 || index >= items.length) return items;
-    return items.map(function (item, i) { if (i !== index) return item; return { "内容": item["内容"], "已完成": !item["已完成"], "优先级": item["优先级"], "截止日期": item["截止日期"], "标签": (item["标签"] || []).slice(), "重复": item["重复"] }; });
-  }
-  function editItem(items, index, content, priority, deadline, tags, repeat) {
-    if (index < 0 || index >= items.length) return { ok: false, error: "", items: items };
-    if (!content || !content.trim()) return { ok: false, error: "请输入待办内容", items: items };
-    const pri = (priority === "高" || priority === "低") ? priority : "中";
-    const dl = (deadline && /^\d{4}-\d{2}-\d{2}$/.test(deadline)) ? deadline : null;
-    const rep = (repeat === "每天" || repeat === "每周" || repeat === "每月") ? repeat : "不重复";
-    const next = items.slice();
-    next[index] = { "内容": content.trim(), "已完成": items[index]["已完成"], "优先级": pri, "截止日期": dl, "标签": parseTags(tags), "重复": rep };
-    return { ok: true, error: "", items: next };
-  }
-  function deleteItem(items, index) {
-    if (index < 0 || index >= items.length) return { items: items, deleted: null, index: -1 };
-    const next = items.slice(); const deleted = next.splice(index, 1)[0];
-    return { items: next, deleted: deleted, index: index };
-  }
-  function sortedItems(items) {
-    return items.map(function (item, idx) { return { item: item, idx: idx }; }).sort(function (a, b) { const r = priorityRank(a.item["优先级"]) - priorityRank(b.item["优先级"]); return r !== 0 ? r : a.idx - b.idx; });
-  }
-  function filterItems(items, filter, tagFilter, search) {
-    const q = (search || "").trim();
-    return sortedItems(items).filter(function (o) {
-      if (filter === "todo" && o.item["已完成"]) return false;
-      if (filter === "done" && !o.item["已完成"]) return false;
-      if (tagFilter && (o.item["标签"] || []).indexOf(tagFilter) < 0) return false;
-      if (q && o.item["内容"].indexOf(q) < 0) return false;
-      return true;
-    });
-  }
-  function calcStats(items) { const total = items.length; const done = items.filter(function (i) { return i["已完成"]; }).length; return { total: total, done: done, percent: total === 0 ? 0 : Math.round(done / total * 100) }; }
-  function isOverdue(item, today) { return !item["已完成"] && !!item["截止日期"] && item["截止日期"] < today; }
-  function todayStr(d) { const x = d || new Date(); return fmtDate(x); }
-  function loadItems() { try { const raw = localStorage.getItem(STORAGE_KEY); const data = raw ? JSON.parse(raw) : []; return migrateItems(data); } catch (e) { return []; } }
-  function saveItems(items) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); } catch (e) {} }
-  function loadBg() { try { const v = localStorage.getItem(BG_KEY); return (v === "dark" || v === "eye") ? v : "white"; } catch (e) { return "white"; } }
-  function saveBg(v) { try { localStorage.setItem(BG_KEY, v); } catch (e) {} }
-  if (typeof document !== "undefined") {
-    let items = loadItems();
-    let filter = "all"; let tagFilter = null; let search = ""; let lastDeleted = null; let editingIndex = null; let editingDraft = null; let bg = loadBg();
-    const input = document.getElementById("todo-input"); const priSel = document.getElementById("add-priority"); const dateInput = document.getElementById("add-deadline"); const tagInput = document.getElementById("tag-input"); const repeatSel = document.getElementById("add-repeat");
-    const button = document.getElementById("add-button"); const list = document.getElementById("todo-list"); const errorEl = document.getElementById("error-message");
-    const searchInput = document.getElementById("search-input"); const statsEl = document.getElementById("stats"); const undoArea = document.getElementById("undo-area"); const bgSelect = document.getElementById("bg-select"); const tagListEl = document.getElementById("tag-list");
-    bgSelect.value = bg;
-    function priColor(p) { return p === "高" ? "#d1453b" : (p === "中" ? "#eb8909" : "#808080"); }
-    function applyBg() { document.body.classList.toggle("dark", bg === "dark"); document.body.classList.toggle("eye", bg === "eye"); bgSelect.value = bg; }
-    function textBtn(label) { const b = document.createElement("button"); b.textContent = label; b.className = "text-btn"; return b; }
-    function render() {
-      applyBg();
-      const stats = calcStats(items); statsEl.textContent = "已完成 " + stats.done + " / 总共 " + stats.total + " · 进度 " + stats.percent + "%";
-      document.querySelectorAll(".side-count").forEach(function (el) { const k = el.getAttribute("data-count"); el.textContent = k === "all" ? items.length : (k === "todo" ? items.filter(function (i) { return !i["已完成"]; }).length : stats.done); });
-      document.querySelectorAll(".side-btn").forEach(function (b) { b.classList.toggle("active", b.getAttribute("data-filter") === filter); });
-      const counts = {}; items.forEach(function (it) { (it["标签"] || []).forEach(function (t) { counts[t] = (counts[t] || 0) + 1; }); });
-      tagListEl.innerHTML = "";
-      const allBtn = document.createElement("button"); allBtn.className = "tag-btn" + (tagFilter === null ? " active" : ""); allBtn.innerHTML = "<span>全部标签</span><span>" + items.length + "</span>"; allBtn.addEventListener("click", function () { tagFilter = null; render(); }); tagListEl.appendChild(allBtn);
-      Object.keys(counts).forEach(function (t) { const b = document.createElement("button"); b.className = "tag-btn" + (tagFilter === t ? " active" : ""); b.innerHTML = "<span>" + t + "</span><span>" + counts[t] + "</span>"; b.addEventListener("click", function () { tagFilter = t; render(); }); tagListEl.appendChild(b); });
-      undoArea.style.display = lastDeleted ? "block" : "none";
-      list.innerHTML = "";
-      if (items.length === 0) { const li = document.createElement("li"); li.className = "empty"; li.textContent = "暂无待办"; list.appendChild(li); return; }
-      const arr = filterItems(items, filter, tagFilter, search);
-      if (arr.length === 0) { const li = document.createElement("li"); li.className = "empty"; li.textContent = "没有符合条件的待办"; list.appendChild(li); return; }
-      const today = todayStr();
-      arr.forEach(function (o) {
-        const item = o.item; const index = o.idx; const li = document.createElement("li"); li.className = "item";
-        if (editingIndex === index) {
-          const einput = document.createElement("input"); einput.type = "text"; einput.value = editingDraft["内容"]; einput.style.width = "100%"; einput.style.padding = "10px 14px"; einput.style.fontSize = "15px"; einput.style.border = "1px solid #ddd"; einput.style.borderRadius = "999px";
-          const row = document.createElement("div"); row.style.display = "flex"; row.style.gap = "10px"; row.style.flexWrap = "wrap"; row.style.marginTop = "10px";
-          const esel = document.createElement("select"); ["高", "中", "低"].forEach(function (p) { const op = document.createElement("option"); op.value = p; op.textContent = p; if (p === editingDraft["优先级"]) op.selected = true; esel.appendChild(op); });
-          const edate = document.createElement("input"); edate.type = "date"; edate.value = editingDraft["截止日期"] || "";
-          const etag = document.createElement("input"); etag.type = "text"; etag.value = (editingDraft["标签"] || []).join(","); etag.placeholder = "标签，用逗号分隔"; etag.style.padding = "10px 14px"; etag.style.border = "1px solid #ddd"; etag.style.borderRadius = "999px";
-          const erep = document.createElement("select"); ["不重复", "每天", "每周", "每月"].forEach(function (p) { const op = document.createElement("option"); op.value = p; op.textContent = p; if (p === editingDraft["重复"]) op.selected = true; erep.appendChild(op); });
-          const saveBtn = document.createElement("button"); saveBtn.textContent = "保存"; saveBtn.style.padding = "8px 16px"; saveBtn.style.cursor = "pointer"; saveBtn.style.background = "#e44332"; saveBtn.style.color = "#fff"; saveBtn.style.border = "0"; saveBtn.style.borderRadius = "999px";
-          const cancelBtn = textBtn("取消");
-          saveBtn.addEventListener("click", function () { const r = editItem(items, index, einput.value, esel.value, edate.value, etag.value, erep.value); if (!r.ok) { errorEl.textContent = r.error; return; } errorEl.textContent = ""; items = r.items; saveItems(items); editingIndex = null; editingDraft = null; render(); });
-          cancelBtn.addEventListener("click", function () { editingIndex = null; editingDraft = null; errorEl.textContent = ""; render(); });
-          row.appendChild(esel); row.appendChild(edate); row.appendChild(etag); row.appendChild(erep); row.appendChild(saveBtn); row.appendChild(cancelBtn); li.appendChild(einput); li.appendChild(row);
-        } else {
-          const top = document.createElement("div"); top.className = "row-top";
-          const circ = document.createElement("button"); circ.type = "button"; circ.textContent = item["已完成"] ? "✓" : ""; circ.className = "circ"; circ.style.borderColor = priColor(item["优先级"]); if (item["已完成"]) circ.style.background = priColor(item["优先级"]);
-          circ.addEventListener("click", function () { const wasDone = item["已完成"]; items = toggleItem(items, index); if (!wasDone) { const next = generateNextItem(items[index], todayStr()); if (next) items.push(next); } saveItems(items); render(); });
-          const span = document.createElement("span"); span.textContent = item["内容"]; span.className = "item-text" + (item["已完成"] ? " done" : "");
-          top.appendChild(circ); top.appendChild(span);
-          const bottom = document.createElement("div"); bottom.className = "row-bottom";
-          if (item["截止日期"]) { const dspan = document.createElement("span"); dspan.textContent = item["截止日期"]; bottom.appendChild(dspan); if (isOverdue(item, today)) { const over = document.createElement("span"); over.textContent = "逾期"; over.className = "overdue"; bottom.appendChild(over); } }
-          (item["标签"] || []).forEach(function (t) { const pill = document.createElement("span"); pill.className = "tag-pill"; pill.textContent = t; bottom.appendChild(pill); });
-          if (item["重复"] && item["重复"] !== "不重复") { const rep = document.createElement("span"); rep.className = "repeat-label"; rep.textContent = item["重复"] + "重复"; bottom.appendChild(rep); }
-          const spacer = document.createElement("span"); spacer.className = "spacer"; bottom.appendChild(spacer);
-          const editBtn = textBtn("编辑"); editBtn.addEventListener("click", function () { editingIndex = index; editingDraft = { "内容": item["内容"], "优先级": item["优先级"], "截止日期": item["截止日期"] || "", "标签": (item["标签"] || []).slice(), "重复": item["重复"] }; errorEl.textContent = ""; render(); });
-          const delBtn = textBtn("删除"); delBtn.addEventListener("click", function () { const r = deleteItem(items, index); items = r.items; lastDeleted = { item: r.deleted, index: r.index }; saveItems(items); editingIndex = null; editingDraft = null; render(); });
-          bottom.appendChild(editBtn); bottom.appendChild(delBtn); li.appendChild(top); li.appendChild(bottom);
-        }
-        list.appendChild(li);
-      });
+  async function loadTodos(){
+    try {
+      var data = await api("/api/todos", "GET");
+      items = (data.todos || []).map(toLocal);
+      saveCache();
+      document.getElementById("cloud-hint").textContent = "";
+      await maybeImport();
+    } catch(e) {
+      if(String(e.message) === "unauthorized") return;
+      items = loadCache();
+      document.getElementById("cloud-hint").textContent = "云端未连接，显示本地缓存";
     }
-    button.addEventListener("click", function () { const r = addItem(items, input.value, priSel.value.replace("优先级", ""), dateInput.value, tagInput.value, repeatSel.value); if (!r.ok) { errorEl.textContent = r.error; return; } errorEl.textContent = ""; items = r.items; saveItems(items); input.value = ""; dateInput.value = ""; tagInput.value = ""; input.focus(); render(); });
-    input.addEventListener("keydown", function (e) { if (e.key === "Enter") button.click(); });
-    searchInput.addEventListener("input", function () { search = searchInput.value; render(); });
-    document.querySelectorAll(".side-btn").forEach(function (b) { b.addEventListener("click", function () { filter = b.getAttribute("data-filter"); render(); }); });
-    bgSelect.addEventListener("change", function () { bg = bgSelect.value; saveBg(bg); render(); });
-    document.getElementById("undo-button").addEventListener("click", function () { if (!lastDeleted) return; const idx = Math.min(lastDeleted.index, items.length); items.splice(idx, 0, lastDeleted.item); lastDeleted = null; saveItems(items); render(); });
     render();
   }
+  async function maybeImport(){
+    if(items.length > 0) return;
+    var importedKey = "todo-web-cloud-imported-" + userId;
+    try { if(localStorage.getItem(importedKey)) return; } catch(e) { return; }
+    var legacy = [];
+    try {
+      var raw1 = localStorage.getItem("todo-web-v1"); if(raw1){ var d1 = JSON.parse(raw1); if(Array.isArray(d1)) legacy = legacy.concat(d1); }
+      for(var i=0;i<localStorage.length;i++){ var k = localStorage.key(i); if(k && k.indexOf("todo-web-items-") === 0){ try { var dd = JSON.parse(localStorage.getItem(k)); if(Array.isArray(dd)) legacy = legacy.concat(dd); } catch(e2) {} } }
+    } catch(e) {}
+    legacy = legacy.filter(function(it){ return it && it["内容"] && String(it["内容"]).trim(); });
+    if(legacy.length === 0){ try { localStorage.setItem(importedKey, "1"); } catch(e) {} return; }
+    if(!confirm("是否把本地待办（" + legacy.length + " 条）导入该账号？")){ try { localStorage.setItem(importedKey, "1"); } catch(e) {} return; }
+    for(var j=0;j<legacy.length;j++){
+      try { var created = await api("/api/todos", "POST", fromLocal(legacy[j])); items.push(toLocal(created.todo)); } catch(e) {}
+    }
+    try { localStorage.setItem(importedKey, "1"); } catch(e) {}
+    saveCache(); render();
+  }
+  var input=document.getElementById("todo-input"), priSel=document.getElementById("add-priority"), dateInput=document.getElementById("add-deadline"), tagInput=document.getElementById("tag-input"), repeatSel=document.getElementById("add-repeat");
+  var list=document.getElementById("todo-list"), errorEl=document.getElementById("error-message"), searchInput=document.getElementById("search-input"), statsEl=document.getElementById("stats"), undoArea=document.getElementById("undo-area"), bgSelect=document.getElementById("bg-select"), tagListEl=document.getElementById("tag-list");
+  bgSelect.value = bg;
+  function priColor(p){ return p==="高"?"#d1453b":(p==="中"?"#eb8909":"#808080"); }
+  function textBtn(label){ var b=document.createElement("button"); b.textContent=label; b.className="text-btn"; return b; }
+  function showApp(){ document.getElementById("auth-view").style.display="none"; document.getElementById("app-view").style.display="block"; var prefix=email.split("@")[0]||email; var first=email.charAt(0); document.getElementById("avatar-circle").textContent=first; document.getElementById("avatar-name").textContent=prefix; document.getElementById("detail-avatar").textContent=first; document.getElementById("detail-name").textContent=email; document.getElementById("current-user-hint").textContent="当前账号："+email; loadTodos(); }
+  function render(){
+    document.body.classList.toggle("dark", bg==="dark"); document.body.classList.toggle("eye", bg==="eye"); bgSelect.value=bg;
+    document.getElementById("todos-view").style.display=view==="todos"?"block":"none";
+    document.getElementById("users-view").style.display=view==="users"?"block":"none";
+    var total=items.length, done=items.filter(function(i){return i["已完成"];}).length;
+    statsEl.textContent="已完成 "+done+" / 总共 "+total+" · 进度 "+(total===0?0:Math.round(done/total*100))+"%";
+    document.getElementById("detail-stats").textContent="已完成 "+done+" / 总共 "+total+" · 进度 "+(total===0?0:Math.round(done/total*100))+"%";
+    document.querySelectorAll(".side-count").forEach(function(el){ var k=el.getAttribute("data-count"); el.textContent=k==="all"?total:(k==="todo"?total-done:done); });
+    document.querySelectorAll(".side-btn").forEach(function(b){ b.classList.toggle("active", b.getAttribute("data-filter")===filter); });
+    var counts={}; items.forEach(function(it){ (it["标签"]||[]).forEach(function(t){ counts[t]=(counts[t]||0)+1; }); });
+    tagListEl.innerHTML="";
+    var allBtn=document.createElement("button"); allBtn.className="tag-btn"+(tagFilter===null?" active":""); allBtn.innerHTML="<span>全部标签</span><span>"+total+"</span>"; allBtn.addEventListener("click", function(){ tagFilter=null; render(); }); tagListEl.appendChild(allBtn);
+    Object.keys(counts).forEach(function(t){ var b=document.createElement("button"); b.className="tag-btn"+(tagFilter===t?" active":""); b.innerHTML="<span>"+t+"</span><span>"+counts[t]+"</span>"; b.addEventListener("click", function(){ tagFilter=t; render(); }); tagListEl.appendChild(b); });
+    undoArea.style.display=lastDeleted?"block":"none";
+    list.innerHTML="";
+    if(total===0){ var li0=document.createElement("li"); li0.className="empty"; li0.textContent="暂无待办"; list.appendChild(li0); return; }
+    var q=search.trim();
+    var arr=items.map(function(it,idx){return {item:it,idx:idx};}).filter(function(o){ if(filter==="todo" && o.item["已完成"]) return false; if(filter==="done" && !o.item["已完成"]) return false; if(tagFilter && (o.item["标签"]||[]).indexOf(tagFilter)<0) return false; if(q && o.item["内容"].indexOf(q)<0) return false; return true; }).sort(function(a,b){ var r=priorityRank(a.item["优先级"])-priorityRank(b.item["优先级"]); return r!==0?r:a.idx-b.idx; });
+    if(arr.length===0){ var li1=document.createElement("li"); li1.className="empty"; li1.textContent="没有符合条件的待办"; list.appendChild(li1); return; }
+    var today=todayStr();
+    arr.forEach(function(o){
+      var item=o.item, index=o.idx, li=document.createElement("li"); li.className="item";
+      if(editingId===item._id){
+        var einput=document.createElement("input"); einput.type="text"; einput.value=editingDraft["内容"]; einput.style.width="100%"; einput.style.padding="10px 14px"; einput.style.fontSize="15px"; einput.style.border="1px solid #ddd"; einput.style.borderRadius="999px";
+        var row=document.createElement("div"); row.style.display="flex"; row.style.gap="10px"; row.style.flexWrap="wrap"; row.style.marginTop="10px";
+        var esel=document.createElement("select"); ["高","中","低"].forEach(function(p){ var op=document.createElement("option"); op.value=p; op.textContent=p; if(p===editingDraft["优先级"]) op.selected=true; esel.appendChild(op); });
+        var edate=document.createElement("input"); edate.type="date"; edate.value=editingDraft["截止日期"]||"";
+        var etag=document.createElement("input"); etag.type="text"; etag.value=(editingDraft["标签"]||[]).join(","); etag.placeholder="标签，用逗号分隔"; etag.style.padding="10px 14px"; etag.style.border="1px solid #ddd"; etag.style.borderRadius="999px";
+        var erep=document.createElement("select"); ["不重复","每天","每周","每月"].forEach(function(p){ var op=document.createElement("option"); op.value=p; op.textContent=p; if(p===editingDraft["重复"]) op.selected=true; erep.appendChild(op); });
+        var saveBtn=document.createElement("button"); saveBtn.textContent="保存"; saveBtn.style.padding="8px 16px"; saveBtn.style.cursor="pointer"; saveBtn.style.background="#e44332"; saveBtn.style.color="#fff"; saveBtn.style.border="0"; saveBtn.style.borderRadius="999px";
+        var cancelBtn=textBtn("取消");
+        saveBtn.addEventListener("click", async function(){
+          if(!einput.value.trim()){ errorEl.textContent="请输入待办内容"; return; }
+          try {
+            var updated = await api("/api/todos/"+encodeURIComponent(item._id), "PATCH", {content:einput.value.trim(),priority:esel.value,deadline:edate.value||null,tags:parseTags(etag.value),repeat_rule:erep.value});
+            items[index] = toLocal(updated.todo); errorEl.textContent=""; editingId=null; editingDraft=null; saveCache(); render();
+          } catch(e) { if(String(e.message)!=="unauthorized") errorEl.textContent="云端保存失败，请重试"; }
+        });
+        cancelBtn.addEventListener("click", function(){ editingId=null; editingDraft=null; errorEl.textContent=""; render(); });
+        row.appendChild(esel); row.appendChild(edate); row.appendChild(etag); row.appendChild(erep); row.appendChild(saveBtn); row.appendChild(cancelBtn); li.appendChild(einput); li.appendChild(row);
+      } else {
+        var top=document.createElement("div"); top.className="row-top";
+        var circ=document.createElement("button"); circ.type="button"; circ.textContent=item["已完成"]?"✓":""; circ.className="circ"; circ.style.borderColor=priColor(item["优先级"]); if(item["已完成"]) circ.style.background=priColor(item["优先级"]);
+        circ.addEventListener("click", async function(){
+          var wasDone=item["已完成"];
+          try {
+            var updated = await api("/api/todos/"+encodeURIComponent(item._id), "PATCH", {done:!wasDone});
+            items[index] = toLocal(updated.todo);
+            if(!wasDone && item["重复"]!=="不重复"){
+              var nxt = nextRepeatDate(item["截止日期"], item["重复"], todayStr());
+              var created = await api("/api/todos", "POST", {content:item["内容"],priority:item["优先级"],deadline:nxt,tags:item["标签"]||[],repeat_rule:item["重复"]});
+              items.push(toLocal(created.todo));
+            }
+            saveCache(); render();
+          } catch(e) { if(String(e.message)!=="unauthorized") errorEl.textContent="云端保存失败，请重试"; }
+        });
+        var span=document.createElement("span"); span.textContent=item["内容"]; span.className="item-text"+(item["已完成"]?" done":"");
+        top.appendChild(circ); top.appendChild(span);
+        var bottom=document.createElement("div"); bottom.className="row-bottom";
+        if(item["截止日期"]){ var dspan=document.createElement("span"); dspan.textContent=item["截止日期"]; bottom.appendChild(dspan); if(!item["已完成"] && item["截止日期"]<today){ var over=document.createElement("span"); over.textContent="逾期"; over.className="overdue"; bottom.appendChild(over); } }
+        (item["标签"]||[]).forEach(function(t){ var pill=document.createElement("span"); pill.className="tag-pill"; pill.textContent=t; bottom.appendChild(pill); });
+        if(item["重复"]!=="不重复"){ var rep=document.createElement("span"); rep.className="repeat-label"; rep.textContent=item["重复"]+"重复"; bottom.appendChild(rep); }
+        var spacer=document.createElement("span"); spacer.className="spacer"; bottom.appendChild(spacer);
+        var editBtn=textBtn("编辑"); editBtn.addEventListener("click", function(){ editingId=item._id; editingDraft={"内容":item["内容"],"优先级":item["优先级"],"截止日期":item["截止日期"]||"","标签":(item["标签"]||[]).slice(),"重复":item["重复"]}; errorEl.textContent=""; render(); });
+        var delBtn=textBtn("删除"); delBtn.addEventListener("click", async function(){
+          try { await api("/api/todos/"+encodeURIComponent(item._id), "DELETE"); var r=items.splice(index,1)[0]; lastDeleted={item:r,index:index}; editingId=null; editingDraft=null; saveCache(); render(); } catch(e) { if(String(e.message)!=="unauthorized") errorEl.textContent="云端删除失败，请重试"; }
+        });
+        bottom.appendChild(editBtn); bottom.appendChild(delBtn); li.appendChild(top); li.appendChild(bottom);
+      }
+      list.appendChild(li);
+    });
+  }
+  async function doAuth(path){
+    var em=document.getElementById("auth-email").value.trim(), pw=document.getElementById("auth-password").value;
+    var err=document.getElementById("auth-error");
+    if(!em || em.indexOf("@")<0){ err.textContent="邮箱格式不对"; return; }
+    if(!pw || pw.length < 6){ err.textContent="密码至少需要 6 位"; return; }
+    err.textContent="正在处理…";
+    try {
+      var r = await fetch(path, {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({email:em, password:pw})});
+      var data = null; try { data = await r.json(); } catch(e) {}
+      if(!r.ok){ err.textContent = (data && data.error) || "请求失败，请重试"; return; }
+      if(path.indexOf("register") >= 0 && data.needsConfirmation){ err.textContent="请去邮箱点验证链接再登录"; return; }
+      if(!data.access_token){ err.textContent="请去邮箱点验证链接再登录"; return; }
+      token = data.access_token; email = data.user.email; userId = data.user.id;
+      try { localStorage.setItem("todo-web-session-token", token); localStorage.setItem("todo-web-session-email", email); localStorage.setItem("todo-web-session-user", userId); } catch(e) {}
+      err.textContent=""; showApp();
+    } catch(e) { err.textContent="网络失败，请重试"; }
+  }
+  document.getElementById("login-btn").addEventListener("click", function(){ doAuth("/api/auth/login"); });
+  document.getElementById("register-btn").addEventListener("click", function(){ doAuth("/api/auth/register"); });
+  document.getElementById("forgot-btn").addEventListener("click", async function(){
+    var em=document.getElementById("auth-email").value.trim(); var err=document.getElementById("auth-error");
+    if(!em){ err.textContent="请先输入邮箱"; return; }
+    try { var r = await fetch("/api/auth/forgot-password", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({email:em})}); var d=null; try { d=await r.json(); } catch(e) {} err.textContent = r.ok ? "重置邮件已发送，请去邮箱操作" : ((d && d.error) || "发送失败，请重试"); } catch(e) { err.textContent="网络失败，请重试"; }
+  });
+  document.getElementById("avatar-btn").addEventListener("click", function(){ view="users"; render(); });
+  document.getElementById("back-btn").addEventListener("click", function(){ view="todos"; render(); });
+  document.getElementById("logout-btn").addEventListener("click", async function(){ try { await fetch("/api/auth/logout", {method:"POST", headers:headers()}); } catch(e) {} logoutToLogin(""); });
+  document.getElementById("add-button").addEventListener("click", async function(){
+    if(!input.value.trim()){ errorEl.textContent="请输入待办内容"; return; }
+    try {
+      var created = await api("/api/todos", "POST", {content:input.value.trim(),priority:priSel.value.replace("优先级",""),deadline:dateInput.value||null,tags:parseTags(tagInput.value),repeat_rule:repeatSel.value});
+      items.push(toLocal(created.todo)); errorEl.textContent=""; input.value=""; dateInput.value=""; tagInput.value=""; saveCache(); render();
+    } catch(e) { if(String(e.message)!=="unauthorized") errorEl.textContent="云端保存失败，请重试"; }
+  });
+  input.addEventListener("keydown", function(e){ if(e.key==="Enter") document.getElementById("add-button").click(); });
+  searchInput.addEventListener("input", function(){ search=searchInput.value; render(); });
+  document.querySelectorAll(".side-btn").forEach(function(b){ b.addEventListener("click", function(){ filter=b.getAttribute("data-filter"); render(); }); });
+  bgSelect.addEventListener("change", function(){ bg=bgSelect.value; try { localStorage.setItem("todo-web-bg", bg); } catch(e) {} render(); });
+  document.getElementById("undo-button").addEventListener("click", async function(){
+    if(!lastDeleted) return;
+    try { var created = await api("/api/todos", "POST", fromLocal(lastDeleted.item)); items.splice(Math.min(lastDeleted.index, items.length),0,toLocal(created.todo)); lastDeleted=null; saveCache(); render(); } catch(e) { if(String(e.message)!=="unauthorized") errorEl.textContent="云端保存失败，请重试"; }
+  });
+  if(token && email){ showApp(); }
+
 </script>
 </body>
 </html>
