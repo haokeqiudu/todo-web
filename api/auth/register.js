@@ -18,7 +18,11 @@ function translateError(msg) {
   if (m.includes('Password should be at least')) return '密码至少需要 6 位';
   if (m.includes('Invalid email') || m.includes('invalid email')) return '邮箱格式不对';
   if (m.includes('Email rate limit')) return '请求太频繁，请稍后再试';
-  return '注册失败，请重试';
+  if (m.includes('Signup is disabled') || m.includes('signups are disabled') || m.includes('Signups not allowed')) return '注册已关闭，请在 Supabase 后台 Auth 设置里开启邮箱注册';
+  if (m.includes('Email address') && m.includes('invalid')) return '邮箱地址无效';
+  if (m.includes('Database error')) return '数据库错误：' + m;
+  // 调试用：未翻译的原始错误直接带出，便于定位注册失败原因，不含任何密钥
+  return '注册失败，请重试（' + m + '）';
 }
 module.exports = async (req, res) => {
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }
