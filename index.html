@@ -18,10 +18,11 @@
   .sidebar { width: 220px; flex-shrink: 0; background: #fafafa; border: 1px solid #eee; border-radius: 24px; padding: 20px 14px; height: fit-content; }
   body.dark .sidebar { background: #2a2a2a; border-color: #444; }
   .sidebar h2 { font-size: 15px; margin: 0 10px 14px; }
-  .side-btn { display: flex; justify-content: space-between; width: 100%; padding: 11px 12px; font-size: 15px; border: 0; border-radius: 999px; background: transparent; cursor: pointer; text-align: left; color: #555; }
-  body.dark .side-btn { color: #ccc; }
-  .side-btn.active { background: #fee4e2; font-weight: 700; color: #202020; }
-  body.dark .side-btn.active { background: rgba(255,255,255,0.15); color: #fff; }
+  .side-btn, .tag-btn { display: flex; justify-content: space-between; width: 100%; padding: 11px 12px; font-size: 15px; border: 0; border-radius: 999px; background: transparent; cursor: pointer; text-align: left; color: #555; }
+  body.dark .side-btn, body.dark .tag-btn { color: #ccc; }
+  .side-btn.active, .tag-btn.active { background: #fee4e2; font-weight: 700; color: #202020; }
+  body.dark .side-btn.active, body.dark .tag-btn.active { background: rgba(255,255,255,0.15); color: #fff; }
+  .tag-title { font-size: 13px; color: #888; margin: 16px 10px 8px; }
   .sidebar-stats { border-top: 1px solid #eee; margin: 16px 10px 0; padding-top: 14px; font-size: 13px; color: #666; line-height: 1.8; }
   body.dark .sidebar-stats { border-color: #444; color: #aaa; }
   .main { flex: 1; min-width: 280px; }
@@ -31,9 +32,9 @@
   .hint { font-size: 13px; color: #666; }
   body.dark .hint { color: #aaa; }
   .add-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-  #todo-input { flex: 1; min-width: 160px; padding: 11px 14px; font-size: 16px; border: 1px solid #ddd; border-radius: 999px; outline: none; }
+  #todo-input, #tag-input { flex: 1; min-width: 160px; padding: 11px 14px; font-size: 16px; border: 1px solid #ddd; border-radius: 999px; outline: none; }
   .add-row select, .add-row input[type="date"] { padding: 8px 10px; font-size: 14px; border: 1px solid #ddd; border-radius: 999px; background: #fff; }
-  body.dark #todo-input, body.dark .add-row select, body.dark .add-row input[type="date"], body.dark #search-input { background: #333; color: #eee; border-color: #444; }
+  body.dark #todo-input, body.dark #tag-input, body.dark .add-row select, body.dark .add-row input[type="date"], body.dark #search-input { background: #333; color: #eee; border-color: #444; }
   #add-button { padding: 10px 20px; font-size: 15px; font-weight: 700; border: 0; border-radius: 999px; background: #e44332; color: #fff; cursor: pointer; }
   #error-message { min-height: 20px; margin: 8px 0 0; color: #c00; font-size: 14px; }
   #search-input { width: 100%; padding: 11px 16px; font-size: 15px; border: 1px solid #ddd; border-radius: 999px; outline: none; margin-bottom: 8px; }
@@ -48,9 +49,12 @@
   body.dark .circ { background: #333; }
   .item-text { flex: 1; font-size: 16px; }
   .item-text.done { text-decoration: line-through; color: #888; }
-  .row-bottom { display: flex; align-items: center; gap: 10px; margin-top: 6px; margin-left: 34px; flex-wrap: wrap; font-size: 13px; color: #666; }
+  .row-bottom { display: flex; align-items: center; gap: 8px; margin-top: 6px; margin-left: 34px; flex-wrap: wrap; font-size: 13px; color: #666; }
   body.dark .row-bottom { color: #aaa; }
   .overdue { color: #d1453b; font-weight: 700; }
+  .tag-pill { background: #f0f0f0; color: #555; border-radius: 999px; padding: 2px 8px; font-size: 12px; }
+  body.dark .tag-pill { background: rgba(255,255,255,0.12); color: #ccc; }
+  .repeat-label { color: #888; font-size: 12px; }
   .text-btn { padding: 4px 8px; font-size: 13px; border: 0; background: #f5f5f5; border-radius: 999px; color: #666; cursor: pointer; }
   body.dark .text-btn { background: rgba(255,255,255,0.12); color: #ccc; }
   .spacer { flex: 1; }
@@ -66,6 +70,8 @@
     <button class="side-btn" data-filter="all" type="button"><span>全部</span><span class="side-count" data-count="all"></span></button>
     <button class="side-btn" data-filter="todo" type="button"><span>未完成</span><span class="side-count" data-count="todo"></span></button>
     <button class="side-btn" data-filter="done" type="button"><span>已完成</span><span class="side-count" data-count="done"></span></button>
+    <div class="tag-title">标签</div>
+    <div id="tag-list"></div>
     <div class="sidebar-stats" id="stats"></div>
   </aside>
   <main class="main">
@@ -75,6 +81,8 @@
         <input id="todo-input" type="text" placeholder="写一件小事…" aria-label="待办内容">
         <select id="add-priority" aria-label="优先级"><option value="高">高优先级</option><option value="中" selected>中优先级</option><option value="低">低优先级</option></select>
         <input id="add-deadline" type="date" aria-label="截止日期">
+        <input id="tag-input" type="text" placeholder="标签，用逗号分隔，最多 5 个" aria-label="标签">
+        <select id="add-repeat" aria-label="重复"><option value="不重复" selected>不重复</option><option value="每天">每天</option><option value="每周">每周</option><option value="每月">每月</option></select>
         <button id="add-button" type="button">添加</button>
       </div>
       <p id="error-message" role="alert"></p>
@@ -88,30 +96,52 @@
   const STORAGE_KEY = "todo-web-v1";
   const BG_KEY = "todo-web-bg";
   function priorityRank(p) { return p === "高" ? 0 : (p === "低" ? 2 : 1); }
+  function parseTags(input) {
+    if (Array.isArray(input)) return input.map(function (t) { return String(t).trim(); }).filter(Boolean).slice(0, 5);
+    if (!input || typeof input !== "string") return [];
+    const seen = {}; const out = [];
+    input.split(",").forEach(function (part) { let t = part.trim(); if (!t) return; if (t.length > 8) t = t.slice(0, 8); if (seen[t]) return; seen[t] = 1; out.push(t); });
+    return out.slice(0, 5);
+  }
+  function fmtDate(d) { const m = "" + (d.getMonth() + 1); const day = "" + d.getDate(); return d.getFullYear() + "-" + (m.length < 2 ? "0" + m : m) + "-" + (day.length < 2 ? "0" + day : day); }
+  function addDaysStr(ds, days) { const d = new Date(ds + "T00:00:00"); d.setDate(d.getDate() + days); return fmtDate(d); }
+  function addMonthsStr(ds) { const d = new Date(ds + "T00:00:00"); const day = d.getDate(); d.setDate(1); d.setMonth(d.getMonth() + 1); const last = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate(); d.setDate(Math.min(day, last)); return fmtDate(d); }
+  function nextRepeatDate(deadline, repeat, today) {
+    if (!deadline) return null;
+    let next = deadline;
+    for (let i = 0; i < 366; i++) { next = repeat === "每天" ? addDaysStr(next, 1) : repeat === "每周" ? addDaysStr(next, 7) : addMonthsStr(next); if (next > today) return next; }
+    return next;
+  }
+  function generateNextItem(item, today) {
+    if (!item || item["重复"] === "不重复" || !item["重复"]) return null;
+    return { "内容": item["内容"], "已完成": false, "优先级": item["优先级"], "截止日期": nextRepeatDate(item["截止日期"], item["重复"], today), "标签": (item["标签"] || []).slice(), "重复": item["重复"] };
+  }
   function migrateItem(item) {
     if (!item || typeof item !== "object") return null;
     const content = item["内容"];
     if (!content || !String(content).trim()) return null;
-    return { "内容": String(content).trim(), "已完成": !!item["已完成"], "优先级": (item["优先级"] === "高" || item["优先级"] === "低") ? item["优先级"] : "中", "截止日期": (item["截止日期"] && /^\d{4}-\d{2}-\d{2}$/.test(item["截止日期"])) ? item["截止日期"] : null };
+    return { "内容": String(content).trim(), "已完成": !!item["已完成"], "优先级": (item["优先级"] === "高" || item["优先级"] === "低") ? item["优先级"] : "中", "截止日期": (item["截止日期"] && /^\d{4}-\d{2}-\d{2}$/.test(item["截止日期"])) ? item["截止日期"] : null, "标签": parseTags(item["标签"]), "重复": (item["重复"] === "每天" || item["重复"] === "每周" || item["重复"] === "每月") ? item["重复"] : "不重复" };
   }
   function migrateItems(data) { if (!Array.isArray(data)) return []; return data.map(migrateItem).filter(Boolean); }
-  function addItem(items, content, priority, deadline) {
+  function addItem(items, content, priority, deadline, tags, repeat) {
     if (!content || !content.trim()) return { ok: false, error: "请输入待办内容", items: items };
     const pri = (priority === "高" || priority === "低") ? priority : "中";
     const dl = (deadline && /^\d{4}-\d{2}-\d{2}$/.test(deadline)) ? deadline : null;
-    return { ok: true, error: "", items: items.concat([{ "内容": content.trim(), "已完成": false, "优先级": pri, "截止日期": dl }]) };
+    const rep = (repeat === "每天" || repeat === "每周" || repeat === "每月") ? repeat : "不重复";
+    return { ok: true, error: "", items: items.concat([{ "内容": content.trim(), "已完成": false, "优先级": pri, "截止日期": dl, "标签": parseTags(tags), "重复": rep }]) };
   }
   function toggleItem(items, index) {
     if (index < 0 || index >= items.length) return items;
-    return items.map(function (item, i) { if (i !== index) return item; return { "内容": item["内容"], "已完成": !item["已完成"], "优先级": item["优先级"], "截止日期": item["截止日期"] }; });
+    return items.map(function (item, i) { if (i !== index) return item; return { "内容": item["内容"], "已完成": !item["已完成"], "优先级": item["优先级"], "截止日期": item["截止日期"], "标签": (item["标签"] || []).slice(), "重复": item["重复"] }; });
   }
-  function editItem(items, index, content, priority, deadline) {
+  function editItem(items, index, content, priority, deadline, tags, repeat) {
     if (index < 0 || index >= items.length) return { ok: false, error: "", items: items };
     if (!content || !content.trim()) return { ok: false, error: "请输入待办内容", items: items };
     const pri = (priority === "高" || priority === "低") ? priority : "中";
     const dl = (deadline && /^\d{4}-\d{2}-\d{2}$/.test(deadline)) ? deadline : null;
+    const rep = (repeat === "每天" || repeat === "每周" || repeat === "每月") ? repeat : "不重复";
     const next = items.slice();
-    next[index] = { "内容": content.trim(), "已完成": items[index]["已完成"], "优先级": pri, "截止日期": dl };
+    next[index] = { "内容": content.trim(), "已完成": items[index]["已完成"], "优先级": pri, "截止日期": dl, "标签": parseTags(tags), "重复": rep };
     return { ok: true, error: "", items: next };
   }
   function deleteItem(items, index) {
@@ -122,28 +152,29 @@
   function sortedItems(items) {
     return items.map(function (item, idx) { return { item: item, idx: idx }; }).sort(function (a, b) { const r = priorityRank(a.item["优先级"]) - priorityRank(b.item["优先级"]); return r !== 0 ? r : a.idx - b.idx; });
   }
-  function filterItems(items, filter, search) {
+  function filterItems(items, filter, tagFilter, search) {
     const q = (search || "").trim();
     return sortedItems(items).filter(function (o) {
       if (filter === "todo" && o.item["已完成"]) return false;
       if (filter === "done" && !o.item["已完成"]) return false;
+      if (tagFilter && (o.item["标签"] || []).indexOf(tagFilter) < 0) return false;
       if (q && o.item["内容"].indexOf(q) < 0) return false;
       return true;
     });
   }
   function calcStats(items) { const total = items.length; const done = items.filter(function (i) { return i["已完成"]; }).length; return { total: total, done: done, percent: total === 0 ? 0 : Math.round(done / total * 100) }; }
   function isOverdue(item, today) { return !item["已完成"] && !!item["截止日期"] && item["截止日期"] < today; }
-  function todayStr(d) { const x = d || new Date(); const m = "" + (x.getMonth() + 1); const day = "" + x.getDate(); return x.getFullYear() + "-" + (m.length < 2 ? "0" + m : m) + "-" + (day.length < 2 ? "0" + day : day); }
+  function todayStr(d) { const x = d || new Date(); return fmtDate(x); }
   function loadItems() { try { const raw = localStorage.getItem(STORAGE_KEY); const data = raw ? JSON.parse(raw) : []; return migrateItems(data); } catch (e) { return []; } }
   function saveItems(items) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); } catch (e) {} }
   function loadBg() { try { const v = localStorage.getItem(BG_KEY); return (v === "dark" || v === "eye") ? v : "white"; } catch (e) { return "white"; } }
   function saveBg(v) { try { localStorage.setItem(BG_KEY, v); } catch (e) {} }
   if (typeof document !== "undefined") {
     let items = loadItems();
-    let filter = "all"; let search = ""; let lastDeleted = null; let editingIndex = null; let editingDraft = null; let bg = loadBg();
-    const input = document.getElementById("todo-input"); const priSel = document.getElementById("add-priority"); const dateInput = document.getElementById("add-deadline");
+    let filter = "all"; let tagFilter = null; let search = ""; let lastDeleted = null; let editingIndex = null; let editingDraft = null; let bg = loadBg();
+    const input = document.getElementById("todo-input"); const priSel = document.getElementById("add-priority"); const dateInput = document.getElementById("add-deadline"); const tagInput = document.getElementById("tag-input"); const repeatSel = document.getElementById("add-repeat");
     const button = document.getElementById("add-button"); const list = document.getElementById("todo-list"); const errorEl = document.getElementById("error-message");
-    const searchInput = document.getElementById("search-input"); const statsEl = document.getElementById("stats"); const undoArea = document.getElementById("undo-area"); const bgSelect = document.getElementById("bg-select");
+    const searchInput = document.getElementById("search-input"); const statsEl = document.getElementById("stats"); const undoArea = document.getElementById("undo-area"); const bgSelect = document.getElementById("bg-select"); const tagListEl = document.getElementById("tag-list");
     bgSelect.value = bg;
     function priColor(p) { return p === "高" ? "#d1453b" : (p === "中" ? "#eb8909" : "#808080"); }
     function applyBg() { document.body.classList.toggle("dark", bg === "dark"); document.body.classList.toggle("eye", bg === "eye"); bgSelect.value = bg; }
@@ -153,10 +184,14 @@
       const stats = calcStats(items); statsEl.textContent = "已完成 " + stats.done + " / 总共 " + stats.total + " · 进度 " + stats.percent + "%";
       document.querySelectorAll(".side-count").forEach(function (el) { const k = el.getAttribute("data-count"); el.textContent = k === "all" ? items.length : (k === "todo" ? items.filter(function (i) { return !i["已完成"]; }).length : stats.done); });
       document.querySelectorAll(".side-btn").forEach(function (b) { b.classList.toggle("active", b.getAttribute("data-filter") === filter); });
+      const counts = {}; items.forEach(function (it) { (it["标签"] || []).forEach(function (t) { counts[t] = (counts[t] || 0) + 1; }); });
+      tagListEl.innerHTML = "";
+      const allBtn = document.createElement("button"); allBtn.className = "tag-btn" + (tagFilter === null ? " active" : ""); allBtn.innerHTML = "<span>全部标签</span><span>" + items.length + "</span>"; allBtn.addEventListener("click", function () { tagFilter = null; render(); }); tagListEl.appendChild(allBtn);
+      Object.keys(counts).forEach(function (t) { const b = document.createElement("button"); b.className = "tag-btn" + (tagFilter === t ? " active" : ""); b.innerHTML = "<span>" + t + "</span><span>" + counts[t] + "</span>"; b.addEventListener("click", function () { tagFilter = t; render(); }); tagListEl.appendChild(b); });
       undoArea.style.display = lastDeleted ? "block" : "none";
       list.innerHTML = "";
       if (items.length === 0) { const li = document.createElement("li"); li.className = "empty"; li.textContent = "暂无待办"; list.appendChild(li); return; }
-      const arr = filterItems(items, filter, search);
+      const arr = filterItems(items, filter, tagFilter, search);
       if (arr.length === 0) { const li = document.createElement("li"); li.className = "empty"; li.textContent = "没有符合条件的待办"; list.appendChild(li); return; }
       const today = todayStr();
       arr.forEach(function (o) {
@@ -166,28 +201,32 @@
           const row = document.createElement("div"); row.style.display = "flex"; row.style.gap = "10px"; row.style.flexWrap = "wrap"; row.style.marginTop = "10px";
           const esel = document.createElement("select"); ["高", "中", "低"].forEach(function (p) { const op = document.createElement("option"); op.value = p; op.textContent = p; if (p === editingDraft["优先级"]) op.selected = true; esel.appendChild(op); });
           const edate = document.createElement("input"); edate.type = "date"; edate.value = editingDraft["截止日期"] || "";
+          const etag = document.createElement("input"); etag.type = "text"; etag.value = (editingDraft["标签"] || []).join(","); etag.placeholder = "标签，用逗号分隔"; etag.style.padding = "10px 14px"; etag.style.border = "1px solid #ddd"; etag.style.borderRadius = "999px";
+          const erep = document.createElement("select"); ["不重复", "每天", "每周", "每月"].forEach(function (p) { const op = document.createElement("option"); op.value = p; op.textContent = p; if (p === editingDraft["重复"]) op.selected = true; erep.appendChild(op); });
           const saveBtn = document.createElement("button"); saveBtn.textContent = "保存"; saveBtn.style.padding = "8px 16px"; saveBtn.style.cursor = "pointer"; saveBtn.style.background = "#e44332"; saveBtn.style.color = "#fff"; saveBtn.style.border = "0"; saveBtn.style.borderRadius = "999px";
           const cancelBtn = textBtn("取消");
-          saveBtn.addEventListener("click", function () { const r = editItem(items, index, einput.value, esel.value, edate.value); if (!r.ok) { errorEl.textContent = r.error; return; } errorEl.textContent = ""; items = r.items; saveItems(items); editingIndex = null; editingDraft = null; render(); });
+          saveBtn.addEventListener("click", function () { const r = editItem(items, index, einput.value, esel.value, edate.value, etag.value, erep.value); if (!r.ok) { errorEl.textContent = r.error; return; } errorEl.textContent = ""; items = r.items; saveItems(items); editingIndex = null; editingDraft = null; render(); });
           cancelBtn.addEventListener("click", function () { editingIndex = null; editingDraft = null; errorEl.textContent = ""; render(); });
-          row.appendChild(esel); row.appendChild(edate); row.appendChild(saveBtn); row.appendChild(cancelBtn); li.appendChild(einput); li.appendChild(row);
+          row.appendChild(esel); row.appendChild(edate); row.appendChild(etag); row.appendChild(erep); row.appendChild(saveBtn); row.appendChild(cancelBtn); li.appendChild(einput); li.appendChild(row);
         } else {
           const top = document.createElement("div"); top.className = "row-top";
           const circ = document.createElement("button"); circ.type = "button"; circ.textContent = item["已完成"] ? "✓" : ""; circ.className = "circ"; circ.style.borderColor = priColor(item["优先级"]); if (item["已完成"]) circ.style.background = priColor(item["优先级"]);
-          circ.addEventListener("click", function () { items = toggleItem(items, index); saveItems(items); render(); });
+          circ.addEventListener("click", function () { const wasDone = item["已完成"]; items = toggleItem(items, index); if (!wasDone) { const next = generateNextItem(items[index], todayStr()); if (next) items.push(next); } saveItems(items); render(); });
           const span = document.createElement("span"); span.textContent = item["内容"]; span.className = "item-text" + (item["已完成"] ? " done" : "");
           top.appendChild(circ); top.appendChild(span);
           const bottom = document.createElement("div"); bottom.className = "row-bottom";
           if (item["截止日期"]) { const dspan = document.createElement("span"); dspan.textContent = item["截止日期"]; bottom.appendChild(dspan); if (isOverdue(item, today)) { const over = document.createElement("span"); over.textContent = "逾期"; over.className = "overdue"; bottom.appendChild(over); } }
+          (item["标签"] || []).forEach(function (t) { const pill = document.createElement("span"); pill.className = "tag-pill"; pill.textContent = t; bottom.appendChild(pill); });
+          if (item["重复"] && item["重复"] !== "不重复") { const rep = document.createElement("span"); rep.className = "repeat-label"; rep.textContent = item["重复"] + "重复"; bottom.appendChild(rep); }
           const spacer = document.createElement("span"); spacer.className = "spacer"; bottom.appendChild(spacer);
-          const editBtn = textBtn("编辑"); editBtn.addEventListener("click", function () { editingIndex = index; editingDraft = { "内容": item["内容"], "优先级": item["优先级"], "截止日期": item["截止日期"] || "" }; errorEl.textContent = ""; render(); });
+          const editBtn = textBtn("编辑"); editBtn.addEventListener("click", function () { editingIndex = index; editingDraft = { "内容": item["内容"], "优先级": item["优先级"], "截止日期": item["截止日期"] || "", "标签": (item["标签"] || []).slice(), "重复": item["重复"] }; errorEl.textContent = ""; render(); });
           const delBtn = textBtn("删除"); delBtn.addEventListener("click", function () { const r = deleteItem(items, index); items = r.items; lastDeleted = { item: r.deleted, index: r.index }; saveItems(items); editingIndex = null; editingDraft = null; render(); });
           bottom.appendChild(editBtn); bottom.appendChild(delBtn); li.appendChild(top); li.appendChild(bottom);
         }
         list.appendChild(li);
       });
     }
-    button.addEventListener("click", function () { const r = addItem(items, input.value, priSel.value.replace("优先级", ""), dateInput.value); if (!r.ok) { errorEl.textContent = r.error; return; } errorEl.textContent = ""; items = r.items; saveItems(items); input.value = ""; dateInput.value = ""; input.focus(); render(); });
+    button.addEventListener("click", function () { const r = addItem(items, input.value, priSel.value.replace("优先级", ""), dateInput.value, tagInput.value, repeatSel.value); if (!r.ok) { errorEl.textContent = r.error; return; } errorEl.textContent = ""; items = r.items; saveItems(items); input.value = ""; dateInput.value = ""; tagInput.value = ""; input.focus(); render(); });
     input.addEventListener("keydown", function (e) { if (e.key === "Enter") button.click(); });
     searchInput.addEventListener("input", function () { search = searchInput.value; render(); });
     document.querySelectorAll(".side-btn").forEach(function (b) { b.addEventListener("click", function () { filter = b.getAttribute("data-filter"); render(); }); });
